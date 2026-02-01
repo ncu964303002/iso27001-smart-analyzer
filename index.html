@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISO 27001 智能資安事件分析工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .search-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .input-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            transition: all 0.3s;
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .example-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .example-section h4 {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .example-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .example-tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .example-tag:hover {
+            background: #1976d2;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .search-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 15px;
+        }
+
+        .search-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .search-btn:active {
+            transform: translateY(0);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results {
+            padding: 30px;
+            display: none;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .result-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .result-card h3::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .result-content {
+            color: #333;
+            line-height: 1.8;
+        }
+
+        .result-content ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .result-content li {
+            margin-bottom: 8px;
+        }
+
+        .result-content p {
+            margin-bottom: 10px;
+        }
+
+        .incident-title {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .search-section, .results {
+                padding: 20px;
+            }
+
+            .result-card {
+                padding: 20px;
+            }
+
+            #searchInput {
+                min-height: 80px;
+            }
+        }
+
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .severity-high {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .severity-medium {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .severity-low {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .matched-keywords {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .keyword-chip {
+            display: inline-block;
+            background: #e0e0e0;
+            color: #424242;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin: 2px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ISO 27001 智能資安事件分析工具</h1>
+            <p>基於關鍵字分析引擎，即時識別資安風險</p>
+            <span class="badge">⚡ 離線可用 · 即時分析</span>
+        </div>
+
+        <div class="search-section">
+            <label class="input-label">請描述您遇到的資安事件：</label>
+            <textarea 
+                id="searchInput" 
+                placeholder="例如：&#10;• 發現員工在公共場所使用公司筆電處理機密文件&#10;• 系統管理員離職後仍可遠端登入伺服器&#10;• 發現未加密的客戶個資存放在共用資料夾&#10;&#10;系統會自動識別關鍵字並匹配相關的 ISO 27001 條文。"
+                maxlength="2000"
+            ></textarea>
+            <div class="char-count"><span id="charCount">0</span> / 2000</div>
+
+            <div class="example-section">
+                <h4>💡 常見情境範例（點擊快速填入）：</h4>
+                <div class="example-tags">
+                    <span class="example-tag" onclick="fillExample('發現多位員工共用同一組系統管理員帳號密碼')">共用帳號密碼</span>
+                    <span class="example-tag" onclick="fillExample('公司網站遭到 SQL Injection 攻擊，客戶資料外洩')">SQL Injection 攻擊</span>
+                    <span class="example-tag" onclick="fillExample('員工將包含客戶資料的檔案上傳到個人 Google Drive')">資料上傳雲端</span>
+                    <span class="example-tag" onclick="fillExample('清潔人員可自由進出機房，沒有任何管制')">機房管制不當</span>
+                    <span class="example-tag" onclick="fillExample('發現已離職 3 個月的員工 VPN 帳號仍然可以使用')">離職帳號未關閉</span>
+                    <span class="example-tag" onclick="fillExample('筆記型電腦遺失，內有未加密的專案文件')">筆電遺失</span>
+                    <span class="example-tag" onclick="fillExample('USB 隨身碟可以任意插拔使用，沒有管制')">USB 管制</span>
+                    <span class="example-tag" onclick="fillExample('伺服器已經兩年沒有安裝安全性更新')">系統未更新</span>
+                </div>
+            </div>
+
+            <button class="search-btn" onclick="analyzeIncident()" id="analyzeBtn">
+                🔍 開始分析
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">智能分析中，請稍候...</div>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const charCount = document.getElementById('charCount');
+
+        searchInput.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                analyzeIncident();
+            }
+        });
+
+        function fillExample(text) {
+            searchInput.value = text;
+            charCount.textContent = text.length;
+            searchInput.focus();
+        }
+
+        // 智能規則引擎 - 關鍵字與 ISO 27001 條文對應
+        const knowledgeBase = {
+            password: {
+                keywords: ['密碼', '帳號', '認證', '登入', '共用帳號', '預設密碼', '弱密碼'],
+                iso: ['A.5.17 認證資訊', 'A.5.18 存取權限'],
+                risks: [
+                    '未授權人員可能取得系統存取權限',
+                    '無法追蹤個人操作行為與責任歸屬',
+                    '密碼外洩風險增加，可能導致大規模資料外洩',
+                    '違反最小權限原則，權限管理失控'
+                ],
+                measures: [
+                    '實施密碼複雜度政策（至少12字元，包含大小寫、數字、符號）',
+                    '建立密碼定期更換機制（一般帳號90天、特權帳號60天）',
+                    '部署多因素認證(MFA)，特別針對特權帳號與遠端存取',
+                    '禁止帳號共用，每人必須使用個人專屬帳號',
+                    '使用密碼管理工具或單一登入(SSO)系統',
+                    '定期進行帳號權限審查'
+                ],
+                severity: '高'
+            },
+            access: {
+                keywords: ['權限', '存取', '授權', '離職', '職務異動', '特權', '管理員'],
+                iso: ['A.5.18 存取權限', 'A.8.2 特權存取權限', 'A.6.4 離職或變更僱用'],
+                risks: [
+                    '離職或異動人員仍保有不當存取權限',
+                    '權限累積導致違反最小權限原則',
+                    '特權帳號濫用可能造成系統性破壞',
+                    '內部威脅風險增加，可能竊取或破壞資料'
+                ],
+                measures: [
+                    '建立存取權限定期審查機制（至少每季一次）',
+                    '實施角色基礎存取控制(RBAC)',
+                    '離職當日立即撤銷所有系統存取權限',
+                    '職務異動時即時調整權限，移除不必要權限',
+                    '特權帳號實施雙人授權機制',
+                    '記錄所有特權操作並定期審查',
+                    '使用特權帳號管理系統(PAM)'
+                ],
+                severity: '高'
+            },
+            encryption: {
+                keywords: ['加密', '未加密', '明文', '傳輸', 'https', 'ssl', 'tls', '機密', '敏感'],
+                iso: ['A.8.24 密碼學使用', 'A.5.10 資訊及其他相關資產之可接受使用'],
+                risks: [
+                    '資料傳輸或儲存過程中可能被竊聽或竊取',
+                    '中間人攻擊(MITM)風險',
+                    '違反個資法、GDPR等法規要求',
+                    '機密資訊外洩導致商業損失或法律責任'
+                ],
+                measures: [
+                    '所有網站強制使用 HTTPS (TLS 1.2 以上)',
+                    '敏感資料必須加密儲存（AES-256或以上）',
+                    '資料庫連線使用加密通道',
+                    '禁用不安全協定（HTTP、FTP、Telnet）',
+                    '筆記型電腦與行動裝置啟用全磁碟加密',
+                    '實施金鑰管理政策，定期輪換加密金鑰',
+                    '電子郵件傳輸啟用 TLS 加密'
+                ],
+                severity: '高'
+            },
+            backup: {
+                keywords: ['備份', '還原', '復原', '勒索', '資料遺失'],
+                iso: ['A.8.13 資訊備份', 'A.8.14 資訊系統備援'],
+                risks: [
+                    '硬體故障或災難導致資料永久遺失',
+                    '勒索軟體攻擊時無法復原資料',
+                    '業務中斷時間過長，造成營運損失',
+                    '違反法規對資料保存的要求'
+                ],
+                measures: [
+                    '實施 3-2-1 備份策略（3份副本、2種媒體、1份異地）',
+                    '建立自動化備份排程（每日增量、每週完整備份）',
+                    '定期測試備份還原程序（至少每季一次）',
+                    '備份資料必須加密保護',
+                    '異地備份或雲端備份，防範實體災難',
+                    '建立備份保存期限政策',
+                    '監控備份作業成功率並設定告警'
+                ],
+                severity: '高'
+            },
+            physical: {
+                keywords: ['機房', '門禁', '監視', '實體', '進出', '訪客', '清潔', '遺失', '竊取'],
+                iso: ['A.7.2 實體進入控管', 'A.7.4 實體安全監視'],
+                risks: [
+                    '未授權人員進入機房或辦公區域',
+                    '設備遭竊或蓄意破壞',
+                    '實體媒體（文件、硬碟）遺失或竊取',
+                    '無法追蹤進出記錄與事件調查'
+                ],
+                measures: [
+                    '安裝門禁刷卡系統，限制機房與重要區域進出',
+                    '部署 24/7 監視攝影機並保存錄影記錄',
+                    '建立訪客登記與陪同制度',
+                    '實施清桌政策，敏感文件不得放置桌面',
+                    '設備報廢前必須進行資料銷毀（消磁或物理破壞）',
+                    '筆記型電腦使用鎖鏈固定或鎖櫃保管',
+                    '定期審查進出記錄'
+                ],
+                severity: '中'
+            },
+            network: {
+                keywords: ['防火牆', '網路', '攻擊', 'ddos', '入侵', '封包', '流量', 'vpn', '遠端'],
+                iso: ['A.8.20 網路安全', 'A.8.21 網路服務安全', 'A.6.7 遠距工作'],
+                risks: [
+                    '網路攻擊直接進入內部網路',
+                    'DDoS 攻擊導致服務中斷',
+                    '無法監控與阻擋惡意流量',
+                    '遠端連線未加密，資料可能被竊聽'
+                ],
+                measures: [
+                    '部署新世代防火牆(NGFW)與入侵防禦系統(IPS)',
+                    '實施網路分段(Network Segmentation)隔離重要系統',
+                    '建立 DMZ 區域隔離對外服務',
+                    '遠端連線強制使用 VPN 並啟用 MFA',
+                    '定期審查與更新防火牆規則',
+                    '部署 DDoS 防護服務',
+                    '監控網路流量異常並設定告警'
+                ],
+                severity: '高'
+            },
+            patch: {
+                keywords: ['更新', '修補', '漏洞', '弱點', '版本', '過期', '未更新'],
+                iso: ['A.8.8 技術弱點管理'],
+                risks: [
+                    '已知漏洞未修補，易遭受攻擊利用',
+                    '零時差攻擊風險增加',
+                    '系統穩定性與效能下降',
+                    '無法抵禦最新威脅與攻擊手法'
+                ],
+                measures: [
+                    '建立修補程式管理流程與排程',
+                    '每週進行自動化漏洞掃描',
+                    '關鍵漏洞（CVSS 9.0以上）必須在72小時內修補',
+                    '建立測試環境驗證更新，避免影響正式系統',
+                    '訂閱廠商安全公告與威脅情報',
+                    '記錄所有更新與修補作業',
+                    '無法更新的系統進行網路隔離或額外防護'
+                ],
+                severity: '高'
+            },
+            usb: {
+                keywords: ['usb', '隨身碟', '外接', '儲存裝置', '抽取式'],
+                iso: ['A.8.1 使用者端點裝置', 'A.7.7 清桌與清螢幕'],
+                risks: [
+                    '惡意軟體透過 USB 傳播（如勒索軟體）',
+                    '敏感資料被非法複製外洩',
+                    '引入未經授權軟體造成系統漏洞',
+                    'USB 裝置遺失導致資料外洩'
+                ],
+                measures: [
+                    '實施 USB 裝置白名單管理',
+                    '部署端點防護系統(DLP)監控資料傳輸',
+                    'USB 埠實體封鎖或軟體控制',
+                    '所有外部儲存裝置必須加密',
+                    '建立可攜式裝置使用政策與申請流程',
+                    '定期稽核 USB 使用記錄',
+                    '員工資安意識訓練，禁用來路不明的 USB'
+                ],
+                severity: '中'
+            },
+            cloud: {
+                keywords: ['雲端', 'cloud', 'google drive', 'dropbox', 'onedrive', 'saas', 'iaas'],
+                iso: ['A.5.23 雲端服務使用之資訊安全'],
+                risks: [
+                    '影子IT問題，未經核准使用雲端服務',
+                    '資料儲存位置不明確，可能違反法規',
+                    '雲端服務存取控制不當',
+                    '第三方服務商資安事件影響本組織'
+                ],
+                measures: [
+                    '建立雲端服務使用政策與核准清單',
+                    '部署雲端存取安全代理(CASB)',
+                    '評估雲端服務商資安能力（要求 ISO 27001 認證）',
+                    '敏感資料上傳雲端前必須加密',
+                    '強制啟用多因素認證(MFA)',
+                    '定期審查雲端服務使用狀況',
+                    '確保資料可攜性與可刪除性'
+                ],
+                severity: '中'
+            },
+            training: {
+                keywords: ['訓練', '教育', '認知', '意識', '社交工程', '釣魚', '員工'],
+                iso: ['A.6.3 資訊安全認知、教育及訓練'],
+                risks: [
+                    '員工成為資安最弱環節，易受社交工程攻擊',
+                    '網路釣魚郵件點擊率高',
+                    '不當操作導致資安事件',
+                    '不了解資安政策與規範'
+                ],
+                measures: [
+                    '新進員工強制進行資安訓練',
+                    '每年至少舉辦 2 次全員資安教育訓練',
+                    '定期進行網路釣魚演練測試',
+                    '建立資安事件通報機制與訓練',
+                    '提供線上學習平台與資源',
+                    '針對不同角色設計客製化訓練課程',
+                    '追蹤訓練成效與測驗結果'
+                ],
+                severity: '中'
+            },
+            log: {
+                keywords: ['日誌', '紀錄', '記錄', 'log', '稽核', '軌跡'],
+                iso: ['A.8.15 日誌記錄'],
+                risks: [
+                    '資安事件無法追查根本原因',
+                    '無法進行數位鑑識調查',
+                    '異常行為無法及時偵測',
+                    '法規遵循要求無法滿足'
+                ],
+                measures: [
+                    '建立集中式日誌管理系統(SIEM)',
+                    '記錄所有關鍵系統與應用程式日誌',
+                    '日誌保存至少 6-12 個月',
+                    '實施日誌完整性保護，防止竄改',
+                    '設定異常行為告警規則',
+                    '定期審查日誌',
+                    '確保所有系統時間同步(NTP)'
+                ],
+                severity: '中'
+            },
+            vendor: {
+                keywords: ['供應商', '廠商', '外包', '第三方', '委外', '合約'],
+                iso: ['A.5.19 供應商關係之資訊安全', 'A.5.20 供應商協議之資訊安全'],
+                risks: [
+                    '供應鏈攻擊風險',
+                    '第三方資安漏洞影響本組織',
+                    '資料處理不當或外洩',
+                    '服務中斷無應變計畫'
+                ],
+                measures: [
+                    '建立供應商資安評估機制',
+                    '簽署資安協議與服務等級協議(SLA)',
+                    '定期稽核供應商資安狀況',
+                    '要求供應商提供資安證明（如 ISO 27001）',
+                    '建立供應商分級管理制度',
+                    '簽署資料處理協議(DPA)明確規範責任',
+                    '定期審查供應商績效'
+                ],
+                severity: '中'
+            },
+            incident: {
+                keywords: ['事件', '應變', '演練', '通報', '緊急', '危機'],
+                iso: ['A.5.24 資訊安全事件管理規劃及準備', 'A.5.25 資訊安全事件之評估及決策'],
+                risks: [
+                    '事件發生時反應混亂無章法',
+                    '損失擴大無法有效控制',
+                    '復原時間過長影響業務',
+                    '證據保全不當影響調查'
+                ],
+                measures: [
+                    '建立資安事件應變計畫(IRP)',
+                    '成立資安事件應變小組(CSIRT)',
+                    '定義事件分類與嚴重等級',
+                    '建立通報流程與聯絡清單',
+                    '定期進行桌面演練與實戰演練',
+                    '準備事件處理工具與設備',
+                    '建立事件後檢討機制',
+                    '與外部資安廠商簽約支援'
+                ],
+                severity: '中'
+            },
+            mobile: {
+                keywords: ['手機', '行動', '平板', 'byod', 'mdm', '個人裝置'],
+                iso: ['A.6.7 遠距工作', 'A.8.1 使用者端點裝置'],
+                risks: [
+                    '個人裝置存取公司資料無管控',
+                    '裝置遺失導致資料外洩',
+                    '惡意應用程式感染公司網路',
+                    '工作與個人資料混用'
+                ],
+                measures: [
+                    '實施行動裝置管理(MDM/EMM)系統',
+                    '建立 BYOD 政策與使用條款',
+                    '強制裝置加密與螢幕鎖定',
+                    '部署遠端抹除功能',
+                    '應用程式白名單控制',
+                    '網路存取控制(NAC)',
+                    '工作資料容器化隔離'
+                ],
+                severity: '中'
+            },
+            confidentiality: {
+                keywords: ['保密', '協議', 'nda', '離職', '洩密', '商業機密'],
+                iso: ['A.6.1 篩選', 'A.6.6 保密或不揭露協議'],
+                risks: [
+                    '機密資訊外洩缺乏法律約束',
+                    '智慧財產權無法保護',
+                    '員工離職後洩露商業機密',
+                    '無法追究法律責任'
+                ],
+                measures: [
+                    '所有新進員工必須簽署保密協議(NDA)',
+                    '定期更新保密協議內容符合最新法規',
+                    '離職時再次確認保密義務',
+                    '建立資訊分類分級制度',
+                    '特殊職位簽署競業禁止條款',
+                    '保留簽署記錄並定期稽核'
+                ],
+                severity: '中'
+            },
+            web: {
+                keywords: ['網站', '應用程式', 'sql injection', 'xss', 'csrf', '注入', '漏洞掃描'],
+                iso: ['A.8.25 安全發展生命週期', 'A.8.26 應用程式安全性要求'],
+                risks: [
+                    'SQL Injection 攻擊導致資料庫外洩',
+                    'XSS 攻擊竊取使用者 Cookie',
+                    '應用程式漏洞被利用進行攻擊',
+                    '客戶資料與個資外洩'
+                ],
+                measures: [
+                    '開發階段實施安全編碼規範',
+                    '定期進行網站漏洞掃描',
+                    '部署 Web Application Firewall (WAF)',
+                    '實施輸入驗證與輸出編碼',
+                    '使用參數化查詢防止 SQL Injection',
+                    '上線前進行滲透測試',
+                    '建立安全發展生命週期(SDLC)'
+                ],
+                severity: '高'
+            }
+        };
+
+        function analyzeIncident() {
+            const incident = searchInput.value.trim();
+            const resultsDiv = document.getElementById('results');
+            const loadingDiv = document.getElementById('loading');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+
+            if (!incident) {
+                alert('請輸入資安事件描述');
+                return;
+            }
+
+            if (incident.length < 5) {
+                alert('請提供更詳細的資安事件描述（至少5個字元）');
+                return;
+            }
+
+            // 顯示載入狀態
+            loadingDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '🔄 分析中...';
+
+            // 模擬分析延遲
+            setTimeout(() => {
+                const analysis = performAnalysis(incident);
+                displayResult(incident, analysis);
+                
+                loadingDiv.style.display = 'none';
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = '🔍 開始分析';
+            }, 800);
+        }
+
+        function performAnalysis(incident) {
+            const incidentLower = incident.toLowerCase();
+            const matchedCategories = [];
+            const matchedKeywords = new Set();
+
+            // 關鍵字匹配
+            for (const [category, data] of Object.entries(knowledgeBase)) {
+                let matched = false;
+                for (const keyword of data.keywords) {
+                    if (incidentLower.includes(keyword)) {
+                        matched = true;
+                        matchedKeywords.add(keyword);
+                    }
+                }
+                if (matched) {
+                    matchedCategories.push({category, data, weight: matchedKeywords.size});
+                }
+            }
+
+            // 如果沒有匹配，返回通用建議
+            if (matchedCategories.length === 0) {
+                return {
+                    iso: ['A.5.1 資訊安全政策', 'A.5.2 資訊安全角色及責任'],
+                    risks: [
+                        '未識別的資安風險可能導致資料外洩',
+                        '缺乏適當的資安控制措施',
+                        '可能違反相關法規要求',
+                        '組織資安態勢不明確'
+                    ],
+                    measures: [
+                        '進行完整的資安風險評估',
+                        '建立資訊安全管理制度(ISMS)',
+                        '制定明確的資安政策與程序',
+                        '實施資安意識訓練',
+                        '定期進行資安稽核',
+                        '諮詢專業資安顧問進行深入評估'
+                    ],
+                    severity: '中',
+                    severityReason: '未能識別具體風險類別，建議進行完整評估',
+                    matchedKeywords: []
+                };
+            }
+
+            // 合併所有匹配類別的結果
+            const isoSet = new Set();
+            const risksSet = new Set();
+            const measuresSet = new Set();
+            let maxSeverity = '低';
+
+            for (const {data} of matchedCategories) {
+                data.iso.forEach(iso => isoSet.add(iso));
+                data.risks.forEach(risk => risksSet.add(risk));
+                data.measures.forEach(measure => measuresSet.add(measure));
+                
+                if (data.severity === '高') maxSeverity = '高';
+                else if (data.severity === '中' && maxSeverity !== '高') maxSeverity = '中';
+            }
+
+            return {
+                iso: Array.from(isoSet),
+                risks: Array.from(risksSet).slice(0, 6),
+                measures: Array.from(measuresSet).slice(0, 8),
+                severity: maxSeverity,
+                severityReason: `識別到 ${matchedCategories.length} 個風險類別，包含關鍵資安議題`,
+                matchedKeywords: Array.from(matchedKeywords)
+            };
+        }
+
+        function displayResult(incident, data) {
+            const resultsDiv = document.getElementById('results');
+            
+            const isoHTML = data.iso.map(iso => `<span class="tag">${iso}</span>`).join('');
+            const risksHTML = data.risks.map(risk => `<li>${risk}</li>`).join('');
+            const measuresHTML = data.measures.map(measure => `<li>${measure}</li>`).join('');
+            const keywordsHTML = data.matchedKeywords.map(kw => `<span class="keyword-chip">${kw}</span>`).join('');
+            
+            let severityClass = 'severity-low';
+            if (data.severity === '高') severityClass = 'severity-high';
+            else if (data.severity === '中') severityClass = 'severity-medium';
+
+            resultsDiv.innerHTML = `
+                <div class="incident-title">
+                    📋 ${incident.length > 80 ? incident.substring(0, 80) + '...' : incident}
+                    <span class="severity-badge ${severityClass}">${data.severity}風險</span>
+                </div>
+                
+                ${data.matchedKeywords.length > 0 ? `
+                <div class="matched-keywords">
+                    <strong>🎯 識別關鍵字：</strong>${keywordsHTML}
+                </div>
+                ` : ''}
+                
+                <div class="result-card">
+                    <h3>⚖️ 可能違反的 ISO 27001 條文</h3>
+                    <div class="result-content">
+                        ${isoHTML}
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <h3>⚠️ 風險影響分析</h3>
+                    <div class="result-content">
+                        <p><strong>嚴重程度評估：</strong>${data.severityReason}</p>
+                        <ul>${risksHTML}</ul>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <h3>✅ 建議改善措施</h3>
+                    <div class="result-content">
+                        <ul>${measuresHTML}</ul>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <p style="color: #666; font-size: 14px;">💡 此分析基於關鍵字智能匹配，建議搭配專業資安顧問進行詳細評估</p>
+                </div>
+            `;
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    </script>
+</body>
+</html>
